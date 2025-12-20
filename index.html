@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Lotería - Comprobador Local</title>
+    <title>Lotería DRG - Comprobador Local</title>
     
     <!-- Estilos Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -43,7 +43,9 @@
             X: (props) => <Icon path='<path d="M18 6 6 18"/><path d="m6 6 12 12"/>' {...props} />,
             Coins: (props) => <Icon path='<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m7.1 13.84 1.59-1.59"/>' {...props} />,
             Sparkles: (props) => <Icon path='<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/>' {...props} />,
-            Save: (props) => <Icon path='<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>' {...props} />
+            Save: (props) => <Icon path='<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>' {...props} />,
+            Download: (props) => <Icon path='<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>' {...props} />,
+            Upload: (props) => <Icon path='<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>' {...props} />
         };
 
         const App = () => {
@@ -108,6 +110,37 @@
 
           const formatMoney = (amount) => {
             return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
+          };
+
+          // --- EXPORTAR E IMPORTAR ---
+          const handleExport = () => {
+              if (tickets.length === 0) {
+                  alert("No hay datos para exportar.");
+                  return;
+              }
+              const dataStr = JSON.stringify(tickets);
+              // Codificar simple a base64 para facilitar el copiar/pegar sin romper caracteres
+              const encoded = btoa(unescape(encodeURIComponent(dataStr))); 
+              prompt("Copia este CÓDIGO y pégalo en 'Importar' en tu otro dispositivo:", encoded);
+          };
+
+          const handleImport = () => {
+              const code = prompt("Pega aquí el código que copiaste del otro dispositivo:");
+              if (!code) return;
+              try {
+                  const decoded = decodeURIComponent(escape(atob(code)));
+                  const json = JSON.parse(decoded);
+                  if (Array.isArray(json)) {
+                      if(confirm(`Se van a cargar ${json.length} décimos. Esto reemplazará lo que tienes ahora. ¿Continuar?`)) {
+                        setTickets(json);
+                        alert("¡Datos cargados correctamente!");
+                      }
+                  } else {
+                      alert("El código no parece válido.");
+                  }
+              } catch (e) {
+                  alert("Error al leer el código. Asegúrate de copiarlo entero.");
+              }
           };
 
           const calculateResults = (winningNumber, typeOfPrize) => {
@@ -340,6 +373,16 @@
 
               <footer className="text-center text-gray-500 text-xs py-8">
                 <p>Datos guardados en este navegador.</p>
+                
+                {/* BOTONES DE EXPORTAR E IMPORTAR */}
+                <div className="flex justify-center gap-6 mt-4">
+                    <button onClick={handleExport} className="flex items-center gap-1.5 text-emerald-700 hover:text-emerald-900 font-semibold bg-emerald-100/50 hover:bg-emerald-100 px-3 py-1.5 rounded transition-colors">
+                        <Icons.Download size={14} /> Exportar
+                    </button>
+                    <button onClick={handleImport} className="flex items-center gap-1.5 text-emerald-700 hover:text-emerald-900 font-semibold bg-emerald-100/50 hover:bg-emerald-100 px-3 py-1.5 rounded transition-colors">
+                        <Icons.Upload size={14} /> Importar
+                    </button>
+                </div>
               </footer>
 
               {/* Modal */}
