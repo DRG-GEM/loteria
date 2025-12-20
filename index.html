@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotería DRG - Comprobador Local</title>
+    <title>Mi Lotería - Comprobador Local</title>
     
     <!-- Estilos Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -44,8 +44,8 @@
             Coins: (props) => <Icon path='<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m7.1 13.84 1.59-1.59"/>' {...props} />,
             Sparkles: (props) => <Icon path='<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/>' {...props} />,
             Save: (props) => <Icon path='<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>' {...props} />,
-            Download: (props) => <Icon path='<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>' {...props} />,
-            Upload: (props) => <Icon path='<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>' {...props} />
+            Share: (props) => <Icon path='<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/>' {...props} />,
+            Download: (props) => <Icon path='<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>' {...props} />
         };
 
         const App = () => {
@@ -75,9 +75,37 @@
             'pedrea': { name: 'Pedrea / Menor', multiplier: 5 }
           };
 
+          // --- EFECTO: CARGA INICIAL Y URL MÁGICA ---
           useEffect(() => {
+            // 1. Guardar cambios en LocalStorage
             localStorage.setItem('loteria_tickets_local', JSON.stringify(tickets));
           }, [tickets]);
+
+          useEffect(() => {
+             // 2. Comprobar si vienen datos en la URL (al abrir enlace compartido)
+             const params = new URLSearchParams(window.location.search);
+             const sharedData = params.get('data');
+             
+             if (sharedData) {
+                 try {
+                     const decoded = decodeURIComponent(escape(atob(sharedData)));
+                     const json = JSON.parse(decoded);
+                     if (Array.isArray(json) && json.length > 0) {
+                         // Pequeño delay para asegurar que la UI está lista
+                         setTimeout(() => {
+                            if(confirm(`¡Hola! Hemos detectado una lista compartida con ${json.length} décimos.\n\n¿Quieres cargarla en este dispositivo?`)) {
+                                setTickets(json);
+                                alert("¡Décimos cargados correctamente!");
+                                // Limpiar la URL para que quede bonita
+                                window.history.replaceState({}, document.title, window.location.pathname);
+                            }
+                         }, 500);
+                     }
+                 } catch (e) {
+                     console.error("Error cargando datos compartidos", e);
+                 }
+             }
+          }, []); // Solo se ejecuta al abrir la página
 
           // --- FUNCIONES ---
           const addTicket = (e) => {
@@ -112,35 +140,26 @@
             return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
           };
 
-          // --- EXPORTAR E IMPORTAR ---
-          const handleExport = () => {
+          // --- NUEVA FUNCIÓN: COMPARTIR ENLACE ---
+          const handleShareLink = () => {
               if (tickets.length === 0) {
-                  alert("No hay datos para exportar.");
+                  alert("No tienes décimos para compartir. Añade alguno primero.");
                   return;
               }
               const dataStr = JSON.stringify(tickets);
-              // Codificar simple a base64 para facilitar el copiar/pegar sin romper caracteres
+              // Codificar datos en base64 para que sean seguros en una URL
               const encoded = btoa(unescape(encodeURIComponent(dataStr))); 
-              prompt("Copia este CÓDIGO y pégalo en 'Importar' en tu otro dispositivo:", encoded);
-          };
-
-          const handleImport = () => {
-              const code = prompt("Pega aquí el código que copiaste del otro dispositivo:");
-              if (!code) return;
-              try {
-                  const decoded = decodeURIComponent(escape(atob(code)));
-                  const json = JSON.parse(decoded);
-                  if (Array.isArray(json)) {
-                      if(confirm(`Se van a cargar ${json.length} décimos. Esto reemplazará lo que tienes ahora. ¿Continuar?`)) {
-                        setTickets(json);
-                        alert("¡Datos cargados correctamente!");
-                      }
-                  } else {
-                      alert("El código no parece válido.");
-                  }
-              } catch (e) {
-                  alert("Error al leer el código. Asegúrate de copiarlo entero.");
-              }
+              
+              // Construir la URL completa usando la dirección actual (GitHub Pages o Local)
+              const fullUrl = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
+              
+              // Intentar copiar al portapapeles automáticamente
+              navigator.clipboard.writeText(fullUrl).then(() => {
+                  alert("✅ ¡ENLACE COPIADO!\n\nPégalo en WhatsApp, Telegram o Email.\nQuien lo abra verá tus mismos décimos.");
+              }).catch(() => {
+                  // Fallback por si el navegador bloquea el copiado
+                  prompt("Copia este enlace y mándalo por WhatsApp:", fullUrl);
+              });
           };
 
           const calculateResults = (winningNumber, typeOfPrize) => {
@@ -203,8 +222,8 @@
                       Mi Lotería
                     </h1>
                     <p className="text-emerald-200 text-sm mt-1 flex items-center gap-2">
-                        <span className="bg-emerald-900/50 px-2 py-0.5 rounded text-xs uppercase tracking-widest border border-emerald-600">Archivo Local</span>
-                        HTML
+                        <span className="bg-emerald-900/50 px-2 py-0.5 rounded text-xs uppercase tracking-widest border border-emerald-600">Web App</span>
+                        Sin servidor
                     </p>
                   </div>
                   <div className="hidden md:block text-right">
@@ -372,17 +391,15 @@
               </main>
 
               <footer className="text-center text-gray-500 text-xs py-8">
-                <p>Datos guardados en este navegador.</p>
+                <p>Datos guardados en tu navegador.</p>
                 
-                {/* BOTONES DE EXPORTAR E IMPORTAR */}
+                {/* BOTÓN NUEVO: COMPARTIR ENLACE */}
                 <div className="flex justify-center gap-6 mt-4">
-                    <button onClick={handleExport} className="flex items-center gap-1.5 text-emerald-700 hover:text-emerald-900 font-semibold bg-emerald-100/50 hover:bg-emerald-100 px-3 py-1.5 rounded transition-colors">
-                        <Icons.Download size={14} /> Exportar
-                    </button>
-                    <button onClick={handleImport} className="flex items-center gap-1.5 text-emerald-700 hover:text-emerald-900 font-semibold bg-emerald-100/50 hover:bg-emerald-100 px-3 py-1.5 rounded transition-colors">
-                        <Icons.Upload size={14} /> Importar
+                    <button onClick={handleShareLink} className="flex items-center gap-2 text-white font-bold bg-emerald-600 hover:bg-emerald-700 px-6 py-3 rounded-full shadow-lg transition-transform active:scale-95">
+                        <Icons.Share size={18} /> ¡COMPARTIR MI LISTA!
                     </button>
                 </div>
+                <p className="mt-2 text-[10px] text-gray-400">Pulsa para generar un enlace y enviarlo a tu móvil</p>
               </footer>
 
               {/* Modal */}
