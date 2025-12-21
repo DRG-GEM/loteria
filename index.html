@@ -61,8 +61,8 @@
         const LogoHeader = () => {
             const [imgError, setImgError] = useState(false);
             
-            // Intentamos cargar 'logo_dragon.png' por defecto
-            // Si falla, mostramos el SVG DragonEmblem
+            // AHORA BUSCA .JPG
+            // Si falla la carga, mostrará el dragón vectorial de respaldo
             
             return (
                 <div className="flex items-center gap-4 relative z-10">
@@ -72,7 +72,7 @@
                         
                         {!imgError ? (
                             <img 
-                                src="logo_dragon.png" 
+                                src="logo_dragon.jpg" 
                                 alt="Dragón DRG" 
                                 className="w-full h-full object-cover"
                                 onError={() => setImgError(true)}
